@@ -20,7 +20,6 @@
         }
 
         body{
-
             background:
             linear-gradient(
                 135deg,
@@ -29,18 +28,14 @@
             );
 
             min-height:100vh;
-
             color:white;
-
             padding:40px;
         }
 
         .container{
 
             width:95%;
-
             max-width:1400px;
-
             margin:auto;
 
             background:#101b35;
@@ -57,7 +52,7 @@
 
             text-align:center;
 
-            font-size:70px;
+            font-size:65px;
 
             color:#00ff66;
 
@@ -95,23 +90,16 @@
         }
 
         .info{
-
             text-align:center;
-
-            margin:10px;
         }
 
         .info h2{
-
             color:#00ff66;
-
             margin-bottom:8px;
         }
 
         .info p{
-
             font-size:22px;
-
             font-weight:bold;
         }
 
@@ -165,6 +153,35 @@
             transform:scale(1.05);
         }
 
+        .output-section{
+
+            margin-top:50px;
+
+            text-align:center;
+        }
+
+        .output-section h2{
+
+            font-size:50px;
+
+            margin-bottom:25px;
+
+            color:#00ff66;
+        }
+
+        video{
+
+            width:100%;
+
+            max-height:750px;
+
+            border-radius:25px;
+
+            border:5px solid #00ff66;
+
+            background:black;
+        }
+
         .cards{
 
             display:flex;
@@ -207,33 +224,6 @@
             font-size:20px;
         }
 
-        .note{
-
-            margin-top:35px;
-
-            text-align:center;
-
-            color:#cccccc;
-
-            font-size:18px;
-        }
-
-        @media(max-width:900px){
-
-            h1{
-                font-size:45px;
-            }
-
-            .subtitle{
-                font-size:18px;
-            }
-
-            button{
-                width:100%;
-            }
-
-        }
-
     </style>
 
 </head>
@@ -252,18 +242,18 @@
         <div class="top-bar">
 
             <div class="info">
-                <h2>Date</h2>
-                <p id="date"></p>
-            </div>
-
-            <div class="info">
-                <h2>Time</h2>
-                <p id="clock"></p>
-            </div>
-
-            <div class="info">
                 <h2>Status</h2>
                 <p>ACTIVE</p>
+            </div>
+
+            <div class="info">
+                <h2>AI Model</h2>
+                <p>YOLOv8</p>
+            </div>
+
+            <div class="info">
+                <h2>Detection</h2>
+                <p>Road Damage</p>
             </div>
 
         </div>
@@ -276,7 +266,7 @@
                 <input
                     type="file"
                     name="file"
-                    accept="image/*,video/*"
+                    accept="video/*"
                     required>
 
                 <br><br>
@@ -287,58 +277,46 @@
 
             </form>
 
-            <div class="note">
-                Supported Formats:
-                JPG, PNG, JPEG, MP4, AVI
-            </div>
+        </div>
+
+        {% if output_video %}
+
+        <div class="output-section">
+
+            <h2>Detection Output</h2>
+
+            <video controls autoplay>
+
+                <source
+                    src="{{ output_video }}"
+                    type="video/mp4">
+
+            </video>
 
         </div>
+
+        {% endif %}
 
         <div class="cards">
 
             <div class="card">
                 <h3>YOLOv8</h3>
-                <p>
-                    Real-time road damage detection
-                </p>
+                <p>Real-time road damage detection</p>
             </div>
 
             <div class="card">
                 <h3>OpenCV</h3>
-                <p>
-                    Video & image frame processing
-                </p>
+                <p>Video frame processing system</p>
             </div>
 
             <div class="card">
                 <h3>AI Monitoring</h3>
-                <p>
-                    Smart road crack analysis
-                </p>
+                <p>Smart crack & pothole analysis</p>
             </div>
 
         </div>
 
     </div>
-
-    <script>
-
-        function updateDateTime(){
-
-            const now = new Date();
-
-            document.getElementById("clock").innerHTML =
-                now.toLocaleTimeString();
-
-            document.getElementById("date").innerHTML =
-                now.toLocaleDateString();
-        }
-
-        setInterval(updateDateTime,1000);
-
-        updateDateTime();
-
-    </script>
 
 </body>
 
