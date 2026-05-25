@@ -2,17 +2,18 @@ from flask import Flask, render_template, request
 from ultralytics import YOLO
 import cv2
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 
-# Folders
+# folders
 UPLOAD_FOLDER = "static/uploads"
 OUTPUT_FOLDER = "static/output"
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-# Load trained YOLO model
+# load model
 model = YOLO("models/best.pt")
 
 
@@ -23,45 +24,27 @@ def index():
 
     if request.method == "POST":
 
-        # Get uploaded video
-        video = request.files["video"]
+        file = request.files["video"]
 
-        if video:
+        if file:
 
-            # Save uploaded video
-            input_path = os.path.join(
-                UPLOAD_FOLDER,
-                video.filename
-            )
+            # save uploaded video
+            upload_path = os.path.join(UPLOAD_FOLDER, file.filename)
+            file.save(upload_path)
 
-            video.save(input_path)
+            # output path
+            output_filename = "detected_" + file.filename
+            output_path = os.path.join(OUTPUT_FOLDER, output_filename)
 
-            # Output filename
-            output_filename = "detected_" + video.filename
+            # open video
+            cap = cv2.VideoCapture(upload_path)
 
-            output_path = os.path.join(
-                OUTPUT_FOLDER,
-                output_filename
-            )
-
-            # Open video
-            cap = cv2.VideoCapture(input_path)
-
-            # Video properties
             width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            fps = cap.get(cv2.CAP_PROP_FPS)
+            fps = int(cap.get(cv2.CAP_PROP_FPS))
 
-            # Codec
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-
-            # Save processed video
-            out = cv2.VideoWriter(
-                output_path,
-                fourcc,
-                fps,
-                (width, height)
-            )
+            out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
             while True:
 
@@ -70,29 +53,30 @@ def index():
                 if not ret:
                     break
 
-                # Resize for faster processing
-                frame = cv2.resize(frame, (640, 360))
+                # detect
+                results = model(frame)
 
-                # YOLO detection
-                results = model(frame, conf=0.5)
-
-                # Draw detections
                 annotated_frame = results[0].plot()
 
-                # Resize back
-                annotated_frame = cv2.resize(
+                # date & time
+                current_time = datetime.now().strftime("%d-%m-%Y %I:%M:%S %p")
+
+                cv2.putText(
                     annotated_frame,
-                    (width, height)
+                    current_time,
+                    (20, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 255, 0),
+                    2
                 )
 
-                # Write frame
                 out.write(annotated_frame)
 
             cap.release()
             out.release()
 
-            # Send output video to HTML
-            output_video = "output/" + output_filename
+            output_video = "/" + output_path.replace("\\", "/")
 
     return render_template(
         "index.html",
@@ -101,4 +85,4 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)
