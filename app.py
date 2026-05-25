@@ -6,63 +6,51 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# folders
-UPLOAD_FOLDER = "static/uploads"
-OUTPUT_FOLDER = "static/output"
+UPLOAD_FOLDER = "uploads"
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-# load model
+# Load trained model
 model = YOLO("models/best.pt")
 
 
 @app.route("/", methods=["GET", "POST"])
 def index():
 
-    output_video = None
-
     if request.method == "POST":
 
-        file = request.files["video"]
+        file = request.files["file"]
 
         if file:
 
-            # save uploaded video
-            upload_path = os.path.join(UPLOAD_FOLDER, file.filename)
-            file.save(upload_path)
+            file_path = os.path.join(
+                UPLOAD_FOLDER,
+                file.filename
+            )
 
-            # output path
-            output_filename = "detected_" + file.filename
-            output_path = os.path.join(OUTPUT_FOLDER, output_filename)
+            file.save(file_path)
 
-            # open video
-            cap = cv2.VideoCapture(upload_path)
+            # FILE EXTENSION
+            ext = file.filename.split(".")[-1].lower()
 
-            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            fps = int(cap.get(cv2.CAP_PROP_FPS))
+            # IMAGE DETECTION
+            if ext in ["jpg", "jpeg", "png"]:
 
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+                image = cv2.imread(file_path)
 
-            while True:
+                results = model(
+                    image,
+                    conf=0.5
+                )
 
-                ret, frame = cap.read()
+                annotated_image = results[0].plot()
 
-                if not ret:
-                    break
-
-                # detect
-                results = model(frame)
-
-                annotated_frame = results[0].plot()
-
-                # date & time
-                current_time = datetime.now().strftime("%d-%m-%Y %I:%M:%S %p")
+                current_time = datetime.now().strftime(
+                    "%d-%m-%Y  %I:%M:%S %p"
+                )
 
                 cv2.putText(
-                    annotated_frame,
+                    annotated_image,
                     current_time,
                     (20, 40),
                     cv2.FONT_HERSHEY_SIMPLEX,
@@ -71,17 +59,66 @@ def index():
                     2
                 )
 
-                out.write(annotated_frame)
+                cv2.imshow(
+                    "Road Damage Detection AI",
+                    annotated_image
+                )
 
-            cap.release()
-            out.release()
+                cv2.waitKey(0)
 
-            output_video = "/" + output_path.replace("\\", "/")
+                cv2.destroyAllWindows()
 
-    return render_template(
-        "index.html",
-        output_video=output_video
-    )
+            # VIDEO DETECTION
+            else:
+
+                cap = cv2.VideoCapture(file_path)
+
+                while True:
+
+                    ret, frame = cap.read()
+
+                    if not ret:
+                        break
+
+                    frame = cv2.resize(
+                        frame,
+                        (1000, 600)
+                    )
+
+                    results = model(
+                        frame,
+                        conf=0.5
+                    )
+
+                    annotated_frame = results[0].plot()
+
+                    current_time = datetime.now().strftime(
+                        "%d-%m-%Y  %I:%M:%S %p"
+                    )
+
+                    cv2.putText(
+                        annotated_frame,
+                        current_time,
+                        (20, 40),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        1,
+                        (0, 255, 0),
+                        2
+                    )
+
+                    cv2.imshow(
+                        "Road Damage Detection AI",
+                        annotated_frame
+                    )
+
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+
+                cap.release()
+
+                cv2.destroyAllWindows()
+
+    return render_template("index.html")
 
 
 if __name__ == "__main__":
