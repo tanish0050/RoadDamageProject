@@ -13,7 +13,7 @@ OUTPUT_FOLDER = "static/output"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-# load trained model
+# load YOLO model
 model = YOLO("models/best.pt")
 
 
@@ -21,6 +21,7 @@ model = YOLO("models/best.pt")
 def index():
 
     output_video = None
+    output_image = None
 
     if request.method == "POST":
 
@@ -40,56 +41,28 @@ def index():
 
         file.save(upload_path)
 
-        # output file
-        output_filename = "detected_output.mp4"
+        # extension
+        ext = file.filename.split(".")[-1].lower()
 
-        output_path = os.path.join(
-            OUTPUT_FOLDER,
-            output_filename
-        )
+        # ---------------- IMAGE DETECTION ----------------
 
-        # open video
-        cap = cv2.VideoCapture(upload_path)
+        if ext in ["jpg", "jpeg", "png"]:
 
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = cap.get(cv2.CAP_PROP_FPS)
+            image = cv2.imread(upload_path)
 
-        if fps == 0:
-            fps = 20
-
-        # mp4 codec
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-
-        out = cv2.VideoWriter(
-            output_path,
-            fourcc,
-            fps,
-            (width, height)
-        )
-
-        while True:
-
-            ret, frame = cap.read()
-
-            if not ret:
-                break
-
-            # detection
             results = model(
-                frame,
+                image,
                 conf=0.5
             )
 
-            annotated_frame = results[0].plot()
+            annotated_image = results[0].plot()
 
-            # date & time
             current_time = datetime.now().strftime(
                 "%d-%m-%Y  %I:%M:%S %p"
             )
 
             cv2.putText(
-                annotated_frame,
+                annotated_image,
                 current_time,
                 (20, 40),
                 cv2.FONT_HERSHEY_SIMPLEX,
@@ -98,19 +71,89 @@ def index():
                 2
             )
 
-            out.write(annotated_frame)
+            output_image_name = "detected_image.jpg"
 
-        cap.release()
-        out.release()
+            output_image_path = os.path.join(
+                OUTPUT_FOLDER,
+                output_image_name
+            )
 
-        output_video = "/" + output_path.replace("\\", "/")
+            cv2.imwrite(
+                output_image_path,
+                annotated_image
+            )
 
-        return render_template(
-            "index.html",
-            output_video=output_video
-        )
+            output_image = "/" + output_image_path.replace("\\", "/")
 
-    return render_template("index.html")
+        # ---------------- VIDEO DETECTION ----------------
+
+        else:
+
+            output_video_name = "detected_output.mp4"
+
+            output_video_path = os.path.join(
+                OUTPUT_FOLDER,
+                output_video_name
+            )
+
+            cap = cv2.VideoCapture(upload_path)
+
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+
+            if fps == 0:
+                fps = 20
+
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+
+            out = cv2.VideoWriter(
+                output_video_path,
+                fourcc,
+                fps,
+                (width, height)
+            )
+
+            while True:
+
+                ret, frame = cap.read()
+
+                if not ret:
+                    break
+
+                results = model(
+                    frame,
+                    conf=0.5
+                )
+
+                annotated_frame = results[0].plot()
+
+                current_time = datetime.now().strftime(
+                    "%d-%m-%Y  %I:%M:%S %p"
+                )
+
+                cv2.putText(
+                    annotated_frame,
+                    current_time,
+                    (20, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 255, 0),
+                    2
+                )
+
+                out.write(annotated_frame)
+
+            cap.release()
+            out.release()
+
+            output_video = "/" + output_video_path.replace("\\", "/")
+
+    return render_template(
+        "index.html",
+        output_video=output_video,
+        output_image=output_image
+    )
 
 
 if __name__ == "__main__":
